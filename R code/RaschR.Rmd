@@ -1,0 +1,260 @@
+---
+title: "Analysis"
+author: "Christian Rubjerg Hejstvig-Larsen"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    code_folding: hide
+---
+
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, results = "hold")
+
+
+# Load libraries
+library(eRm)          # Rasch model
+
+library(dplyr)        # Data manipulation
+library(data.table)   # Data manipulation
+library(reshape)      # Data manipulation
+
+library(readr)        # Data import
+
+library(ggplot2)      # Data visualization
+```
+
+
+
+```{r}
+#Read data
+data <- read_table("C:/Users/brf337/Desktop/Rasch package/data.csv", col_names = TRUE, col_types = cols("factor", "factor", "factor", "factor", "factor", "factor", "factor", "factor", "factor", "factor", "factor", "numeric", "factor", "factor"))
+head(data)
+summary(data)
+```
+
+# Data description
+This data was collected online with an interactive version of the Rosenberg Self-Esteem Scale (see Rosenberg, M. (1965). Society and the adolescent self-image. Princeton, NJ: Princeton University Press).
+
+Individuals were informed at the start of the test that their data would be saved. When they completed the test they were asked to confirm that the responses they had given were accurate and could be used for research, only those who confirmed are included in this dataset (75.7% confirmed). 
+
+The following items were rated on the following scale where 1=strongly disagree, 2=disagree, 3=agree, and 4=strongly agree (0=no answer):
+
+
+Q1. I feel that I am a person of worth, at least on an equal plane with others.	
+Q2. I feel that I have a number of good qualities.	
+Q3. All in all, I am inclined to feel that I am a failure.	
+Q4. I am able to do things as well as most other people.	
+Q5. I feel I do not have much to be proud of.	
+Q6. I take a positive attitude toward myself.	
+Q7. On the whole, I am satisfied with myself.	
+Q8. I wish I could have more respect for myself.	
+Q9. I certainly feel useless at times.	
+Q10. At times I think I am no good at all.
+
+Some other questions were on the following page:
+
+gender. Chosen from a drop down list (1=male, 3=female, 3=other; 0=none was chosen)
+age. Entered as a free response. (0=response that could not be converted to integer)
+
+And:
+
+source. How the user came to the page (HTTP referer). 1=front page of personality test website, 2=Google search, 3=other.
+country. Inferred from technical information using MaxMind GeoLite.
+
+
+
+
+
+# Data inspection
+
+We do a few plots of the data to get an idea of the distribution of the data. We do boxplots of the different questions:
+
+```{r}
+meltData <- melt(data.table(data), measure.vars = c("Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10")) %>% 
+  dplyr::select(variable, value)
+
+# Boxplot of the different questions
+png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/obsdata_barplot.png", width = 800, height = 600)
+ggplot(meltData, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+dev.off()
+```
+
+
+# Simple binary analysis
+We modify the data to be binary for each question. That is, if a person scores 3 or higher on a question, we code it as 1, otherwise 0. We remove 0 values as these correspond to no answer. From the boxplots above, we see that the majority of the answers are 1, 2, 3, or 4, so we can safely remove 0 values assuming they overlap with missing values.
+
+```{r}
+
+# Subset data to only include the questions
+data_subset <- data %>% dplyr::select(Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10)
+
+# Go through each row and determine if a value is zero
+row_sub <- apply(data_subset, 1, function(row) all(row !=0))
+
+# Remove rows with zero values
+data_clean <- data_subset[row_sub,]
+data_clean <- data_clean %>% na.omit()
+
+dim(data)
+dim(data_clean)
+```
+We see that 1865 rows were removed corresponding to roughly 4 pct. of the data. We can now proceed with the binary analysis.
+
+```{r}
+binary_data <- data_clean %>% mutate(Q1 = ifelse(Q1 %in% c(0,1,2), 0, 1),
+                               Q2 = ifelse(Q2 %in% c(0,1,2), 0, 1),
+                               Q3 = ifelse(Q3 %in% c(0,1,2), 0, 1),
+                               Q4 = ifelse(Q4 %in% c(0,1,2), 0, 1),
+                               Q5 = ifelse(Q5 %in% c(0,1,2), 0, 1),
+                               Q6 = ifelse(Q6 %in% c(0,1,2), 0, 1),
+                               Q7 = ifelse(Q7 %in% c(0,1,2), 0, 1),
+                               Q8 = ifelse(Q8 %in% c(0,1,2), 0, 1),
+                               Q9 = ifelse(Q9 %in% c(0,1,2), 0, 1),
+                               Q10 = ifelse(Q10 %in% c(0,1,2), 0, 1)) %>% 
+dplyr::select(Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10)
+head(binary_data)
+dim(binary_data)
+```
+
+## Rasch analysis
+We now perform a Rasch analysis on the binary data. We start by fitting a Rasch model to the data:
+
+```{r}
+# Fit Rasch model
+rasch_model_binary <- RM(binary_data, sum0 = TRUE) #sum0 = FALSE. Is this just a question of interpretation of the coefficients?
+summary(rasch_model_binary)
+#coef(rasch_model_binary)
+```
+
+
+```{r}
+MLoef(rasch_model_binary)
+iarm::item_restscore(rasch_model_binary)
+```
+
+
+```{r}
+pp_rasch_model_binary <- person.parameter(rasch_model_binary)
+pp_rasch_model_binary
+```
+
+```{r}
+itemfit(pp_rasch_model_binary)
+```
+
+```{r}
+png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/jointICC.png", width = 800, height = 600)
+plotjointICC(rasch_model_binary)
+dev.off()
+```
+```{r}
+png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/PImap.png", width = 800, height = 600)
+plotPImap(rasch_model_binary)
+dev.off()
+```
+
+
+
+```{r}
+plotjointICC(rasch_model_binary)
+plotPImap(rasch_model_binary)
+```
+
+
+```{r}
+library(RASCHplot)
+CICCplot(model = rasch_model_binary, 
+         which.item = 10,
+         lower.groups = c(0 ,3 ,6 ,8 ,9))
+```
+
+
+# Rasch model polytomous data
+We now perform a Rasch analysis on the original data. We start by fitting a Rasch model to the data:
+
+```{r}
+
+data_clean_poly <- data %>% na.omit %>% mutate(Q1 = as.integer(Q1),
+                               Q2 = as.integer(Q2),
+                               Q3 = as.integer(Q3),
+                               Q4 = as.integer(Q4),
+                               Q5 = as.integer(Q5),
+                               Q6 = as.integer(Q6),
+                               Q7 = as.integer(Q7),
+                               Q8 = as.integer(Q8),
+                               Q9 = as.integer(Q9),
+                               Q10 = as.integer(Q10)) %>% 
+  dplyr::select(Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10)
+
+# Fit Rasch model
+rasch_model <- PCM(data_clean_poly, sum0 = FALSE)
+summary(rasch_model)
+```
+
+
+```{r}
+iarm::item_restscore(rasch_model)
+```
+
+
+
+```{r}
+person.parameter(rasch_model)
+```
+
+
+
+
+# AMTS data
+
+```{r}
+library(iarm)
+
+it.AMTS <- amts[,4:13]
+it.AMTS <- na.omit(it.AMTS)
+mod.AMTS <- RM(it.AMTS, sum0 = FALSE)
+summary(mod.AMTS)
+```
+```{r}
+item_restscore(mod.AMTS)
+```
+
+
+```{r}
+CICCplot(mod.AMTS, 
+         which.item = 7, 
+         lower.groups = c(0 ,3 ,6 ,8 ,9)) # Why are these chosen?
+```
+
+
+
+
+# HADS data
+```{r}
+HADS <- "https://raw.githubusercontent.com/ERRTG/ERRTG.github.io/master/HADS.csv"
+it.HADS <- read.csv(HADS)
+it.HADS.A <- it.HADS[,c(1,3,5,7,9,11,13)]
+mod.HADS <- PCM(it.HADS.A, sum0 = FALSE)
+summary(mod.HADS)
+```
+
+```{r}
+item_restscore(mod.HADS)
+```
+
+```{r}
+CICCplot(mod.HADS, 
+         which.item = c(1, 2, 3, 4, 5, 6, 7), 
+         lower.groups =  c(0 ,3 ,6 ,9 ,13 ,18)) # Why are these chosen?
+```
+
+```{r}
+person.parameter(mod.HADS)
+```
+
+
+
+
+

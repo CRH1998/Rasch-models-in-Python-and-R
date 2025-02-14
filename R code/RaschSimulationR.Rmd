@@ -1,0 +1,405 @@
+---
+title: "eRm package"
+author: "Christian Rubjerg Hejstvig-Larsen"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    code_folding: hide
+  pdf_document:
+    toc: true
+---
+
+
+# Analysis on simulated dataset
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, results = "hold")
+library(eRm)          # Rasch model
+
+library(dplyr)        # Data manipulation
+library(data.table)   # Data manipulation
+library(reshape)      # Data manipulation
+
+library(readr)        # Data import
+
+library(ggplot2)      # Data visualization
+library(RASCHplot)    # Data visualization
+
+source("C:/Users/brf337/Desktop/Rasch package/R code/SimulateRaschData.R") # Source simulation function
+```
+
+
+## Dichotomous data
+
+We read the simulated dataset and fit the Rasch model to the data.
+
+```{r}
+BinarySimData <- read_csv("C:/Users/brf337/Desktop/Rasch package/BinarySimDataFrame.csv")
+head(BinarySimData)
+```
+
+
+```{r}
+# Fit Rasch model
+RaschBinarySimData <- RM(BinarySimData[,-1], sum0 = TRUE) # Removing the person column
+summary(RaschBinarySimData)
+```
+
+We can see that the estimated item difficulties are close to the theoretical values and they resemble the ones estimated in Python. We can summarize the model output in the following data frame:
+
+
+```{r}
+theo_item_difficulty <- -c(-1, 1, -0.5, 0.5, 0.1, -0.1, -2, 2, 2.5, -2.5)
+
+coef_data_frame <- data.frame(coef(RaschBinarySimData))
+coef_data_frame$sd <- RaschBinarySimData$se.beta
+coef_data_frame$theoretical_value <- theo_item_difficulty
+coef_data_frame$lower_ci <- coef_data_frame$coef.RaschBinarySimData. - 1.96 * coef_data_frame$sd
+coef_data_frame$upper_ci <- coef_data_frame$coef.RaschBinarySimData. + 1.96 * coef_data_frame$sd
+coef_data_frame$ci_contain_theoretical_value <- 
+  coef_data_frame$theoretical_value > coef_data_frame$lower_ci & coef_data_frame$theoretical_value < coef_data_frame$upper_ci
+coef_data_frame
+```
+The estimated standard errors appear to be slighlty larger than the ones estimated in Python, but otherwise the two sets of estimates are very similar. We visualize the each of the ICCs for each item:
+
+```{r}
+plotICC(RaschBinarySimData)
+```
+
+or we can plot the ICCs for all items in one plot:
+
+```{r}
+plotjointICC(RaschBinarySimData)
+```
+
+In addition we plot the person-item map, to provide insight into the relationship between the person and item parameters:
+
+```{r}
+plotPImap(RaschBinarySimData, sorted = TRUE)
+```
+
+We perform a Martin-Loef test to test the fit of the Rasch model:
+
+```{r}
+MLoef(RaschBinarySimData)
+```
+
+We continue to estimate the person parameters:
+
+```{r}
+ppbinary <- person.parameter(RaschBinarySimData)
+ppbinary
+```
+These estimates differ quite a lot from the ones estimated in Python. The small values are a bit smaller while the large values are a bit larger. The estimated standard errors also appear to be larger than the ones estimated in Python. 
+
+```{r}
+itemfit(ppbinary)
+```
+
+
+
+## Polytomous data
+
+We read the simulated dataset and fit the Rasch model to the data.
+
+```{r}
+PolySimData <- read_csv("C:/Users/brf337/Desktop/Rasch package/PolytomousSimDataFrame.csv")
+head(PolySimData)
+```
+
+
+```{r}
+# Fit Rasch model
+RaschPolySimData <- PCM(PolySimData[,-1], sum0 = TRUE) # Remove person column
+summary(RaschPolySimData)
+```
+
+We can see that the estimated item difficulties are close to the theoretical values and they resemble the ones estimated in Python. We can summarize the model output in the following data frame:
+
+
+```{r}
+theo_item_difficulty <- -c(-1, 1, -0.5, 0.5, 0.1, -0.1, -2, 2, 2.5, -2.5)
+
+poly_coef_data_frame <- data.frame(coef(RaschPolySimData))
+poly_coef_data_frame$sd <- RaschPolySimData$se.beta
+#poly_coef_data_frame$theoretical_value <- theo_item_difficulty
+poly_coef_data_frame$lower_ci <- poly_coef_data_frame$coef.RaschPolySimData. - 1.96 * poly_coef_data_frame$sd
+poly_coef_data_frame$upper_ci <- poly_coef_data_frame$coef.RaschPolySimData. + 1.96 * poly_coef_data_frame$sd
+# poly_coef_data_frame$ci_contain_theoretical_value <- 
+#   poly_coef_data_frame$theoretical_value > poly_coef_data_frame$lower_ci & poly_coef_data_frame$theoretical_value < poly_coef_data_frame$upper_ci
+poly_coef_data_frame
+```
+
+How should these estimates be interpreted in relation to the chosen/theoretical difficulty variables??? The ICCs can be plotted again:
+
+```{r}
+plotICC(RaschPolySimData)
+```
+
+
+```{r}
+plotPImap(RaschPolySimData, sorted = TRUE)
+```
+
+
+
+We continue to estimate the person parameters:
+
+```{r}
+ppPoly <- person.parameter(RaschPolySimData)
+ppPoly
+```
+
+
+```{r}
+itemfit(ppPoly)
+```
+
+
+
+# Simulation study
+
+## SML simulation study
+
+We perform a simulation study similar to the one in Python. We simulate a dataset with 500 individuals, 10 items and run 1000 simulations. We specify the item difficulty but randomly generate the person abilities. 
+
+```{r}
+n_simulations <- 500
+n <- 500
+k <- 10
+
+manual_diffs <- c(-1, 1, -0.5, 0.5, 0.1, -0.1, -2, 2, 2.5, -2.5)
+manual_abilities <- rnorm(n, 0, 1)
+
+start <- Sys.time()
+SML_simulation_study <- run_SML_simulation_study(n_simulations = n_simulations, 
+                                                 n_persons = n, 
+                                                 k_items = k, 
+                                                 manual_diffs = manual_diffs, 
+                                                 manual_abilities = manual_abilities)
+end <- Sys.time()
+end - start
+SML_simulation_study
+```
+
+We carry out a simulation study with different number of persons. We run 100 simulations for each number of persons.
+
+```{r}
+set.seed(10022025)
+n_persons_list <- c(100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)
+n_simulations <- 100
+
+SML_simulation_studies <- list()
+
+for (i in 1:length(n_persons_list)) {
+  n <- n_persons_list[i]
+  print(paste("Number of persons: ", n))
+  manual_abilities <- rnorm(n, 0, 1)
+  
+  SML_simulation_study <- run_SML_simulation_study(n_simulations = n_simulations, 
+                                                   n_persons = n, 
+                                                   k_items = k, 
+                                                   manual_diffs = manual_diffs, 
+                                                   manual_abilities = manual_abilities)
+  
+  SML_simulation_studies[[i]] <- SML_simulation_study
+}
+```
+```{r}
+SML_simulation_studies_betas <- data.frame(cbind(
+  n_persons_list, 
+  do.call(rbind, lapply(SML_simulation_studies[1:10], function(x) x$`Mean of betas`))
+))
+
+
+SML_simulation_studies_bias <- data.frame(t(t(SML_simulation_studies_betas[,2:11]) + manual_diffs))
+SML_simulation_studies_bias$persons <- n_persons_list
+
+SML_simulation_studies_sds <- data.frame(cbind(
+  n_persons_list, 
+  do.call(rbind, lapply(SML_simulation_studies[1:10], function(x) x$`Mean of standard deviations`))
+))
+
+
+SML_simulation_studies_betasds <- data.frame(cbind(
+  n_persons_list, 
+  do.call(rbind, lapply(SML_simulation_studies[1:10], function(x) x$`Standard deviation of betas`))
+))
+
+SML_simulation_studies_Coverage <- data.frame(cbind(
+  n_persons_list, 
+  do.call(rbind, lapply(SML_simulation_studies[1:10], function(x) x$Coverage))
+))
+```
+
+```{r}
+betasplot <- ggplot(SML_simulation_studies_bias, aes(x = n_persons_list)) +
+  geom_line(aes(y = `beta1`, color = "beta1")) +
+  geom_line(aes(y = `beta2`, color = "beta2")) +
+  geom_line(aes(y = `beta3`, color = "beta3")) +
+  geom_line(aes(y = `beta4`, color = "beta4")) +
+  geom_line(aes(y = `beta5`, color = "beta5")) +
+  geom_line(aes(y = `beta6`, color = "beta6")) +
+  geom_line(aes(y = `beta7`, color = "beta7")) +
+  geom_line(aes(y = `beta8`, color = "beta8")) +
+  geom_line(aes(y = `beta9`, color = "beta9")) +
+  geom_line(aes(y = `beta10`, color = "beta10")) +
+  scale_x_continuous(breaks = n_persons_list) +
+  scale_color_manual(name = "Item estimates", 
+                     values = c("beta1" = "red", 
+                                "beta2" = "blue", 
+                                "beta3" = "pink",
+                                "beta4" = "green", 
+                                "beta5" = "orange", 
+                                "beta6" = "brown",
+                                "beta7" = "grey", 
+                                "beta8" = "yellow", 
+                                "beta9" = "black", 
+                                "beta10" = "purple")) +
+  scale_shape_discrete(name = "color") +
+  labs(title = "Estimated bias", x = "Number of persons", y = "Bias") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+sdsplot <- ggplot(SML_simulation_studies_sds, aes(x = n_persons_list)) +
+  geom_line(aes(y = `se_beta1`, color = "se_beta1")) +
+  geom_line(aes(y = `se_beta2`, color = "se_beta2")) +
+  geom_line(aes(y = `se_beta3`, color = "se_beta3")) +
+  geom_line(aes(y = `se_beta4`, color = "se_beta4")) +
+  geom_line(aes(y = `se_beta5`, color = "se_beta5")) +
+  geom_line(aes(y = `se_beta6`, color = "se_beta6")) +
+  geom_line(aes(y = `se_beta7`, color = "se_beta7")) +
+  geom_line(aes(y = `se_beta8`, color = "se_beta8")) +
+  geom_line(aes(y = `se_beta9`, color = "se_beta9")) +
+  geom_line(aes(y = `se_beta10`, color = "se_beta10")) +
+  scale_x_continuous(breaks = n_persons_list) +
+  scale_color_manual(name = "Item estimates", 
+                     values = c("se_beta1" = "red", 
+                                "se_beta2" = "blue", 
+                                "se_beta3" = "pink",
+                                "se_beta4" = "green", 
+                                "se_beta5" = "orange", 
+                                "se_beta6" = "brown",
+                                "se_beta7" = "grey", 
+                                "se_beta8" = "yellow", 
+                                "se_beta9" = "black", 
+                                "se_beta10" = "purple")) +
+  scale_shape_discrete(name = "color") +
+  labs(title = "Mean of standard deviations", x = "Number of persons", y = "Standard deviation") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+betasdplot <- ggplot(SML_simulation_studies_betasds, aes(x = n_persons_list)) +
+  geom_line(aes(y = `beta1`, color = "beta1")) +
+  geom_line(aes(y = `beta2`, color = "beta2")) +
+  geom_line(aes(y = `beta3`, color = "beta3")) +
+  geom_line(aes(y = `beta4`, color = "beta4")) +
+  geom_line(aes(y = `beta5`, color = "beta5")) +
+  geom_line(aes(y = `beta6`, color = "beta6")) +
+  geom_line(aes(y = `beta7`, color = "beta7")) +
+  geom_line(aes(y = `beta8`, color = "beta8")) +
+  geom_line(aes(y = `beta9`, color = "beta9")) +
+  geom_line(aes(y = `beta10`, color = "beta10")) +
+  scale_x_continuous(breaks = n_persons_list) +
+  scale_color_manual(name = "Item estimates", 
+                     values = c("beta1" = "red", 
+                                "beta2" = "blue", 
+                                "beta3" = "pink",
+                                "beta4" = "green", 
+                                "beta5" = "orange", 
+                                "beta6" = "brown",
+                                "beta7" = "grey", 
+                                "beta8" = "yellow", 
+                                "beta9" = "black", 
+                                "beta10" = "purple")) +
+  scale_shape_discrete(name = "color") +
+  labs(title = "Standard deviation of estimated item difficulty", x = "Number of persons", y = "Standard deviation") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+Coverageplot <- ggplot(SML_simulation_studies_Coverage, aes(x = n_persons_list)) +
+  geom_line(aes(y = `beta1`, color = "beta1")) +
+  geom_line(aes(y = `beta2`, color = "beta2")) +
+  geom_line(aes(y = `beta3`, color = "beta3")) +
+  geom_line(aes(y = `beta4`, color = "beta4")) +
+  geom_line(aes(y = `beta5`, color = "beta5")) +
+  geom_line(aes(y = `beta6`, color = "beta6")) +
+  geom_line(aes(y = `beta7`, color = "beta7")) +
+  geom_line(aes(y = `beta8`, color = "beta8")) +
+  geom_line(aes(y = `beta9`, color = "beta9")) +
+  geom_line(aes(y = `beta10`, color = "beta10")) +
+  scale_x_continuous(breaks = n_persons_list) +
+  scale_color_manual(name = "Item estimates", 
+                     values = c("beta1" = "red", 
+                                "beta2" = "blue", 
+                                "beta3" = "pink",
+                                "beta4" = "green", 
+                                "beta5" = "orange", 
+                                "beta6" = "brown",
+                                "beta7" = "grey", 
+                                "beta8" = "yellow", 
+                                "beta9" = "black", 
+                                "beta10" = "purple")) +
+  scale_shape_discrete(name = "color") +
+  labs(title = "Coverage", x = "Number of individuals", y = "Coverage") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+gridExtra::grid.arrange(betasplot, sdsplot, betasdplot, Coverageplot, ncol = 2)
+```
+```{r}
+png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/SimulationPlotR.png", width = 1100, height = 800)
+gridExtra::grid.arrange(betasplot, sdsplot, betasdplot, Coverageplot, ncol = 2)
+dev.off()
+```
+
+
+
+## PCM simulation study
+
+We then run a PCM simulation study
+
+```{r}
+PCM_manual_diffs <- rep(c(-4, 1, 1, -4, 8, -2))
+PCM_k_items <- 6
+PCM_n_persons <- 10000
+
+PCM_data <- PCM_sim(k = PCM_k_items, n = PCM_n_persons, PCM_options = 2, manual_diffs = PCM_manual_diffs)
+head(PCM_data)
+```
+
+We can fit the PCM model to the simulated data:
+
+```{r}
+PCM.fit <- PCM(PCM_data)
+summary(PCM.fit)
+```
+```{r}
+c(-4, 1, 1, -4, 8, -2)
+thresholds(PCM.fit)
+
+itemfit(person.parameter(PCM.fit))
+```
+
+
+
+```{r}
+# PCM_sim(k = 10, n = n, manual_diffs = manual_diffs, manual_abilities = manual_abilities, item_reponse_to_add = list(c("item1", "item2", "item3"), c("item4", "item5", "item6"), c("item7", "item8", "item9")))
+```
+
+
+### Small recap of timing
+R is faster at simulating data especially for large n, but Python also runs more checks, so the simulation is more robust. R is faster at fitting the models for large n whereas python is much faster at fitting the models for large k. 
+
+
+For n = 1000 and k = 10, R spends 0.1225221 secs and Python spends 1.91203 secs.
+For n = 10000 and k = 10 R spends 0.465641 secs and Python spends 9.90173 secs.
+For n = 1000 and k = 150, R spends 1.147972 min and Python spends 11.92642 secs.
+
+
+
+
