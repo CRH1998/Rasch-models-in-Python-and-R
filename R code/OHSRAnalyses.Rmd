@@ -1,0 +1,170 @@
+---
+title: "OHS - R analyses"
+author: "Christian Rubjerg Hejstvig-Larsen"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    code_folding: hide
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, results = "hold")
+
+# Load libraries
+library(eRm)          # Rasch model
+library(mirt)         # IRT models
+library(TAM)          # TAM models
+
+library(dplyr)        # Data manipulation
+library(data.table)   # Data manipulation
+library(reshape)      # Data manipulation
+
+library(readr)        # Data import
+
+library(ggplot2)      # Data visualization
+library(RASCHplot)    # Data visualization
+```
+
+
+We start by importing the data:
+
+```{r}
+# Import data
+OHS <- read_delim("C:/Users/brf337/Desktop/Rasch package/OHS.csv", 
+    delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+# Check proportion of rows with missing values
+sum(is.na(rowSums(OHS))) / nrow(OHS)
+```
+The number of missing rows is relatively small so we simply remove these rows:
+
+```{r}
+# Remove rows with missing values
+OHS <- OHS[complete.cases(OHS), ]
+dim(OHS)
+```
+We dichotomize the data to be able to run our analysis:
+
+```{r}
+OHS_dich[] <- lapply(OHS, function(x) {
+    if(is.logical(x > 2)) as.numeric(x > 2) else x
+})
+```
+
+We then run the three different models.
+
+
+
+### eRm
+
+
+
+
+```{r}
+# Model fit
+OHS_eRm <- eRm::RM(OHS_dich, sum0 = TRUE)
+OHS_eRm
+```
+
+
+```{r}
+# pp fit
+OHS_eRm_pp <- eRm::person.parameter(OHS_eRm)
+OHS_eRm_pp
+```
+
+
+```{r}
+# itemfit
+eRm::itemfit(OHS_eRm_pp)
+```
+
+
+
+### mirt
+We can estimate the item parameters of a Rasch model from the data set using the mirt() function as follows:
+
+```{r}
+# Model fit
+OHS_mirt <- mirt::mirt(data = OHS_dich, model = 1, itemtype = "Rasch", SE = TRUE)
+```
+The first argument specifies the data, the second argument specifies the number of dimensions for our IRT model. The third argument specifies the IRT model we want to use, in this case the Rasch model. To retrieve the item parameter estimates we use the coef() function:
+
+```{r}
+coef(OHS_mirt, IRTpars = TRUE, simplify = TRUE)
+```
+The result is a list of three elements: items, means and cov. The latter two elements are the assumed mean and variance/covariance of the person ability distribution for the population of test takers. These are required, since mirt uses marginal maximum likelihood estimation. The slope or discrimination parameter is listed in the $a$ column, the difficulty parameter is listed in the the $b$ column, and the $g$ column denotes the guessing parameter. We specify IRTpars = TRUE to get the "standard" parameterization of the Rasch model. That is, setting IRTpars = TRUE tells the coef() function to convert its estimates from the slope-intercept form to the form
+
+$$P(U_{pi} = 1 \mid \theta_p, \alpha_i, \beta_i, \gamma_i) = \gamma_i (1 - \gamma_i) \frac{\exp(\alpha_i(\theta_p - \beta_i))}{1 + \exp(\alpha_i (\theta_p - \beta_i))} \overset{Rasch} = \frac{\exp(\theta_p - \beta_i)}{1 + \exp(\theta_p - \beta_i)}$$
+where $\alpha$ corresponds to $a$, $\beta$ corresponds to $b$, and $\gamma$ corresponds to $g$ in the output above.
+
+We can estimate the test taker ability using the fscores() function. For unidimensional models, the most important arguments to fscores() are object and method. The object argument takes the reult of the mirt() function. The method argument indicates which method to use for estimating the person parameters. By default, method = "EAP" is used, which stands for expected a posteriori estimation. This method is based on the posterior distribution of the person parameters given the observed data. The fscores() function returns a matrix containing the person parameter for each person:
+
+```{r}
+OHS_mirt_pp <- mirt::fscores(OHS_mirt, method = "EAP")
+head(OHS_mirt_pp)
+```
+It is possible to evaluate the Rasch model fit by means of infit and outfit statistics similar to the eRm package:
+
+```{r}
+mirt::itemfit(OHS_mirt, fit_stats = "infit", method = "ML")
+```
+
+
+### TAM
+
+We can estimate the item parameters of a Rasch model from the data set using the tam.mml() function as follows:
+
+```{r}
+# Model fit
+OHS_TAM <- TAM::tam.mml(OHS_dich)
+OHS_TAM$item
+```
+
+Like mirt, the TAM package uses marginal maximum likelihood estimation. The tam.mml uses the parameterization
+
+
+$$P(U_{pi} = 1 \mid \theta_p, \xi, B_i) \overset{Rasch} = \frac{\exp(B_i \theta_p - \xi_i)}{1 + \exp(B_i \theta_p - \xi_i)}$$
+
+We can get the IRT parameters in the classical parameterization using:
+
+```{r}
+OHS_TAM$item_irt
+```
+
+When we fit the TAM-model we also get estimates of the person parameters which can be retrieved as follows:
+
+```{r}
+OHS_TAM$person
+```
+
+
+
+The TAM package offers various options for assessing the fit of an estimated IRT model. For instance, we can compute in- and outfit statistics in TAM using the tam.fit() function:
+
+```{r}
+TAM::tam.fit(OHS_TAM)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
