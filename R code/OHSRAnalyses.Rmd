@@ -184,26 +184,80 @@ We plot the estimates against each other in six scatter plots:
 
 ```{r}
 # Plot estimates
-par(mfrow = c(2, 3))
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/RagainstPythonEstimates.png", 
+    width = 1200, height = 400)
+par(mfrow = c(1, 3))
 for(i in 1:3){
   plot(estimates_dataframe[,1], estimates_dataframe[,i+1], 
        xlab = "Python", ylab = colnames(estimates_dataframe)[i+1], 
-       main = paste("Estimates", colnames(estimates_dataframe)[i+1], "against Python"))
+       main = paste("Estimates", colnames(estimates_dataframe)[i+1], "against Python"),
+       cex = 1.8, cex.lab = 1.8, cex.axis = 1.8, cex.main = 1.8)
 }
+dev.off()
+```
 
+
+```{r}
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/RagainstREstimates.png", 
+    width = 1200, height = 400)
+par(mfrow = c(1, 3))
 for(i in 1:2){
   plot(estimates_dataframe[,2], estimates_dataframe[,i+2], 
        xlab = "eRm", ylab = colnames(estimates_dataframe)[i+2], 
-       main = paste("Estimates", colnames(estimates_dataframe)[i+2], "against eRm"))
+       main = paste("Estimates", colnames(estimates_dataframe)[i+2], "against eRm"),
+       cex = 2, cex.lab = 2, cex.axis = 2, cex.main = 2)
 }
 
 plot(estimates_dataframe[,3], estimates_dataframe[,4], 
      xlab = "mirt", ylab = "TAM", 
-     main = "Estimates TAM against mirt")
+     main = "Estimates TAM against mirt",
+     cex = 1.8, cex.lab = 1.8, cex.axis = 1.8, cex.main = 1.8)
+dev.off()
 ```
 
+We carry out the exact same procedure for the outfit statistics:
 
+```{r}
+# Construct data frame of outfit statistics
+outfit_dataframe <- data.frame("Python" = OHS_RaschPy_ItemStats$`Outfit MS`, 
+                               "eRm" = eRm::itemfit(OHS_eRm_pp)$i.outfitMSQ, 
+                               "mirt" = mirt::itemfit(OHS_mirt, fit_stats = "infit", method = "ML")$outfit,
+                               "TAM" = TAM::tam.fit(OHS_TAM)$itemfit$Outfit)
+head(outfit_dataframe)
+```
 
+```{r}
+# Plot outfit statistics
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/RagainstPythonOutfit.png", 
+    width = 1200, height = 400)
+par(mfrow = c(1, 3))
+for(i in 1:3){
+  plot(outfit_dataframe[,1], outfit_dataframe[,i+1], 
+       xlab = "Python", ylab = colnames(outfit_dataframe)[i+1], 
+       main = paste("Outfit", colnames(outfit_dataframe)[i+1], "against Python"),
+       cex = 1.8, cex.lab = 1.8, cex.axis = 1.8, cex.main = 1.8)
+}
+dev.off()
+```
+
+```{r}
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/RagainstROutfit.png", 
+    width = 1200, height = 400)
+par(mfrow = c(1, 3))
+for(i in 1:2){
+  plot(outfit_dataframe[,2], outfit_dataframe[,i+2], 
+       xlab = "eRm", ylab = colnames(outfit_dataframe)[i+2], 
+       main = paste("Outfit", colnames(outfit_dataframe)[i+2], "against eRm"),
+       cex = 2, cex.lab = 2, cex.axis = 2, cex.main = 2)
+}
+
+plot(outfit_dataframe[,3], outfit_dataframe[,4], 
+     xlab = "mirt", ylab = "TAM", 
+     main = "Outfit TAM against mirt",
+     cex = 1.8, cex.lab = 1.8, cex.axis = 1.8, cex.main = 1.8)
+
+dev.off()
+```
 
 
 
