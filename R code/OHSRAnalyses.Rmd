@@ -67,6 +67,9 @@ We then run the three different models.
 OHS_eRm <- eRm::RM(OHS_dich, sum0 = TRUE)
 OHS_eRm
 ```
+```{r}
+#eRm::thresholds(OHS_eRm)
+```
 
 
 ```{r}
@@ -152,6 +155,52 @@ TAM::tam.fit(OHS_TAM)
 
 
 
+
+
+# Comparing the models
+We compare the model estimates and the model fit statistics with plotting. We first load the python data:
+
+
+```{r}
+# Import data
+setwd("C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R")
+OHS_RaschPy_ItemStats <- read_csv("Python code/OHS_RaschPy_ItemStats.csv")
+head(OHS_RaschPy_ItemStats)
+```
+
+We then construct a data frame of estimates and a dataframe of outfit statistics:
+
+```{r}
+# Construct data frame of estimates
+estimates_dataframe <- data.frame("Python" = OHS_RaschPy_ItemStats$Estimate, 
+                                  "eRm" = -OHS_eRm$betapar, 
+                                  "mirt" = coef(OHS_mirt, IRTpars = TRUE, simplify = TRUE)$items[,2], 
+                                  "TAM" = OHS_TAM$item_irt$beta)
+head(estimates_dataframe)
+```
+
+
+We plot the estimates against each other in six scatter plots:
+
+```{r}
+# Plot estimates
+par(mfrow = c(2, 3))
+for(i in 1:3){
+  plot(estimates_dataframe[,1], estimates_dataframe[,i+1], 
+       xlab = "Python", ylab = colnames(estimates_dataframe)[i+1], 
+       main = paste("Estimates", colnames(estimates_dataframe)[i+1], "against Python"))
+}
+
+for(i in 1:2){
+  plot(estimates_dataframe[,2], estimates_dataframe[,i+2], 
+       xlab = "eRm", ylab = colnames(estimates_dataframe)[i+2], 
+       main = paste("Estimates", colnames(estimates_dataframe)[i+2], "against eRm"))
+}
+
+plot(estimates_dataframe[,3], estimates_dataframe[,4], 
+     xlab = "mirt", ylab = "TAM", 
+     main = "Estimates TAM against mirt")
+```
 
 
 

@@ -175,8 +175,7 @@ CICCplot(model = rasch_model_binary,
 We now perform a Rasch analysis on the original data. We start by fitting a Rasch model to the data:
 
 ```{r}
-
-data_clean_poly <- data %>% na.omit %>% mutate(Q1 = as.integer(Q1),
+data_poly <- data %>% na.omit %>% mutate(Q1 = as.integer(Q1),
                                Q2 = as.integer(Q2),
                                Q3 = as.integer(Q3),
                                Q4 = as.integer(Q4),
@@ -187,24 +186,30 @@ data_clean_poly <- data %>% na.omit %>% mutate(Q1 = as.integer(Q1),
                                Q9 = as.integer(Q9),
                                Q10 = as.integer(Q10)) %>% 
   dplyr::select(Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10)
-
-# Fit Rasch model
-rasch_model <- PCM(data_clean_poly, sum0 = FALSE)
-summary(rasch_model)
 ```
 
 
 ```{r}
-iarm::item_restscore(rasch_model)
+# Fit PCM model
+PCM_model <- PCM(data_poly, sum0 = TRUE)
+summary(PCM_model)
+```
+
+
+```{r}
+iarm::item_restscore(PCM_model)
 ```
 
 
 
 ```{r}
-person.parameter(rasch_model)
+pp_PCM_model <- eRm::person.parameter(PCM_model)
 ```
 
 
+```{r}
+eRm::itemfit(pp_PCM_model)
+```
 
 
 # AMTS data
