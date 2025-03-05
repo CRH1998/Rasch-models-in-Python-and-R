@@ -175,7 +175,7 @@ CICCplot(model = rasch_model_binary,
 We now perform a Rasch analysis on the original data. We start by fitting a Rasch model to the data:
 
 ```{r}
-data_poly <- data %>% na.omit %>% mutate(Q1 = as.integer(Q1),
+data_poly <- data_clean %>% na.omit %>% mutate(Q1 = as.integer(Q1),
                                Q2 = as.integer(Q2),
                                Q3 = as.integer(Q3),
                                Q4 = as.integer(Q4),
@@ -198,6 +198,7 @@ summary(PCM_model)
 
 ```{r}
 iarm::item_restscore(PCM_model)
+thresholds(PCM_model)
 ```
 
 
