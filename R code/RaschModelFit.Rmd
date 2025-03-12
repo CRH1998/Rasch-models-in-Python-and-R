@@ -22,6 +22,8 @@ library(readr)        # Data import
 
 library(ggplot2)      # Data visualization
 library(RASCHplot)    # Data visualization
+
+source("SimulateRaschData.R")
 ```
 
 
@@ -241,6 +243,149 @@ dev.off()
 
 
 
+
+
+
+# Simulation study removign minimum and maximum values
+
+We run a simulation study where we remove minimum and maximum values to investigate the distribution of the Infit and Outfit statistics for the Rasch model.
+
+```{r}
+n_person__list <- c(100, 250, 500, 1000, 1500, 2000)
+result_list <- vector("list", length(n_person__list))
+
+manual_diffs <- c(1, -2, 0.5, -1, 1.5, 2, -3, 0.5, -1, 1.5)
+
+for (i in 1:length(n_person__list)) {
+  print(paste("Running simulation for", n_person__list[i], "persons"))
+  InfitOutfitSimStudy <- run_InfitOutfit_simulation_study(n_persons = n_person__list[i], k_items = 10, n_simulations = 500, manual_diffs = manual_diffs, remove_min_max = TRUE)
+  result_list[[i]] <- InfitOutfitSimStudy
+}
+```
+
+We store the 0.025 and 0.975 of all the statistics in a data frame
+
+```{r}
+quantile_probs <- c(0.025, 0.05, 0.1, 0.9, 0.95, 0.975)
+min_infit_list <- lapply(result_list, function(x) quantile(x$mininfit, probs = quantile_probs))
+max_infit_list <- lapply(result_list, function(x) quantile(x$maxinfit, probs = quantile_probs))
+min_outfit_list <- lapply(result_list, function(x) quantile(x$minoutfit, probs = quantile_probs))
+max_outfit_list <- lapply(result_list, function(x) quantile(x$maxoutfit, probs = quantile_probs))
+
+mininfit_values <- sapply(1:length(quantile_probs), function(i) unlist(lapply(min_infit_list, `[[`, i)))
+maxinfit_values <- sapply(1:length(quantile_probs), function(i) unlist(lapply(max_infit_list, `[[`, i)))
+minoutfit_values <- sapply(1:length(quantile_probs), function(i) unlist(lapply(min_outfit_list, `[[`, i)))
+maxoutfit_values <- sapply(1:length(quantile_probs), function(i) unlist(lapply(max_outfit_list, `[[`, i)))
+
+colnames(mininfit_values) <- paste0("mininfit",as.character(quantile_probs))
+colnames(maxinfit_values) <- paste0("maxinfit",as.character(quantile_probs))
+colnames(minoutfit_values) <- paste0("minoutfit",as.character(quantile_probs))
+colnames(maxoutfit_values) <- paste0("maxoutfit",as.character(quantile_probs))
+
+mininfit_df <- data.frame(n_persons = n_person__list, mininfit_values)
+maxinfit_df <- data.frame(n_persons = n_person__list, maxinfit_values)
+minoutfit_df <- data.frame(n_persons = n_person__list, minoutfit_values)
+maxoutfit_df <- data.frame(n_persons = n_person__list, maxoutfit_values)
+```
+
+
+We then plot the data frames:
+
+```{r}
+mininfitp <- ggplot(data = mininfit_df, aes(x = n_persons, y = mininfit0.025)) +
+  geom_line(aes(color = "0.025")) +
+  geom_line(aes(y = mininfit0.05, color = "0.05")) +
+  geom_line(aes(y = mininfit0.1, color = "0.1")) +
+  geom_line(aes(y = mininfit0.9, color = "0.9")) +
+  geom_line(aes(y = mininfit0.95, color = "0.95")) +
+  geom_line(aes(y = mininfit0.975, color = "0.975")) +
+  labs(title = "Quantiles of Min Infit MS", x = "Number of persons", y = "Min Infit MS") +
+  scale_x_continuous(breaks = n_person__list[c(-2, -3)]) +
+  scale_color_manual(name = "Quantile", 
+                     values = c("0.025" = "red",
+                                "0.05" = "orange",
+                                "0.1" = "yellow",
+                                "0.9" = "yellow",
+                                "0.95" = "orange",
+                                "0.975" = "blue")) +
+  scale_shape_discrete(name = "color") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+minoutfitp <- ggplot(data = minoutfit_df, aes(x = n_persons, y = minoutfit0.025)) +
+  geom_line(aes(color = "0.025")) +
+  geom_line(aes(y = minoutfit0.05, color = "0.05")) +
+  geom_line(aes(y = minoutfit0.1, color = "0.1")) +
+  geom_line(aes(y = minoutfit0.9, color = "0.9")) +
+  geom_line(aes(y = minoutfit0.95, color = "0.95")) +
+  geom_line(aes(y = minoutfit0.975, color = "0.975")) +
+  labs(title = "Quantiles of Min Outfit MS", x = "Number of persons", y = "Min Outfit MS") +
+  scale_x_continuous(breaks = n_person__list[c(-2, -3)]) +
+  scale_color_manual(name = "Quantile", 
+                     values = c("0.025" = "red",
+                                "0.05" = "orange",
+                                "0.1" = "yellow",
+                                "0.9" = "yellow",
+                                "0.95" = "orange",
+                                "0.975" = "blue")) +
+  scale_shape_discrete(name = "color") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+maxinfitp <- ggplot(data = maxinfit_df, aes(x = n_persons, y = maxinfit0.025)) +
+  geom_line(aes(color = "0.025")) +
+  geom_line(aes(y = maxinfit0.05, color = "0.05")) +
+  geom_line(aes(y = maxinfit0.1, color = "0.1")) +
+  geom_line(aes(y = maxinfit0.9, color = "0.9")) +
+  geom_line(aes(y = maxinfit0.95, color = "0.95")) +
+  geom_line(aes(y = maxinfit0.975, color = "0.975")) +
+  labs(title = "Quantiles of Max Infit MS", x = "Number of persons", y = "Max Infit MS") +
+  scale_x_continuous(breaks = n_person__list[c(-2, -3)]) +
+  scale_color_manual(name = "Quantile", 
+                     values = c("0.025" = "red",
+                                "0.05" = "orange",
+                                "0.1" = "yellow",
+                                "0.9" = "yellow",
+                                "0.95" = "orange",
+                                "0.975" = "blue")) +
+  scale_shape_discrete(name = "color") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+maxoutfitp <- ggplot(data = maxoutfit_df, aes(x = n_persons, y = maxoutfit0.025)) +
+  geom_line(aes(color = "0.025")) +
+  geom_line(aes(y = maxoutfit0.05, color = "0.05")) +
+  geom_line(aes(y = maxoutfit0.1, color = "0.1")) +
+  geom_line(aes(y = maxoutfit0.9, color = "0.9")) +
+  geom_line(aes(y = maxoutfit0.95, color = "0.95")) +
+  geom_line(aes(y = maxoutfit0.975, color = "0.975")) +
+  labs(title = "Quantiles of Max Outfit MS", x = "Number of persons", y = "Max Outfit MS") +
+  scale_x_continuous(breaks = n_person__list[c(-2, -3)]) +
+  scale_color_manual(name = "Quantile", 
+                     values = c("0.025" = "red",
+                                "0.05" = "orange",
+                                "0.1" = "yellow",
+                                "0.9" = "yellow",
+                                "0.95" = "orange",
+                                "0.975" = "blue")) +
+  scale_shape_discrete(name = "color") +
+  theme_bw() + theme(axis.text.x = element_text(angle = 55, vjust = 1, hjust=1), 
+                     axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14))
+
+
+
+gridExtra::grid.arrange(mininfitp, minoutfitp, maxinfitp, maxoutfitp, ncol = 2)
+```
+
+```{r}
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/infitoutfitsimRremoveminmax.png", width = 1100, height = 800)
+gridExtra::grid.arrange(mininfitp, minoutfitp, maxinfitp, maxoutfitp, ncol = 2)
+dev.off()
+```
 
 
 

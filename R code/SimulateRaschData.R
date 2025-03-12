@@ -105,6 +105,7 @@ run_SML_simulation_study <- function(n_simulations, n_persons, k_items, manual_d
   results <- data.frame(matrix(NA, nrow = n_simulations, ncol = 2 * k_items))
   colnames(results) <- c(paste0("beta", 1:k_items), paste0("se_beta", 1:k_items))
   
+  
   # Simulation loop
   for (i in 1:n_simulations) {
     # Simulate data
@@ -234,9 +235,15 @@ run_PCM_simulation_study <- function(n_simulations, n_persons, k_items, PCM_opti
 #                   Infit/outfit simulation study functions                    #
 ################################################################################
 
-run_one_InfitOutfit <- function(n_persons, k_items, manual_diffs, manual_abilities = NULL, misspecified_items = NULL) {
+run_one_InfitOutfit <- function(n_persons, k_items, manual_diffs, manual_abilities = NULL, misspecified_items = NULL, remove_min_max_scores = FALSE) {
   # Simulate data
   sim_data <- SML_sim(k = k_items, n = n_persons, manual_diffs = manual_diffs, manual_abilities = manual_abilities, misspecified_items = misspecified_items)
+  
+
+  if (remove_min_max_scores){
+    # Remove the minimum and maximum scores from the data
+    sim_data <- sim_data[!(rowSums(sim_data) %in% c(0,k_items)),]
+  }
   
   # Fit Rasch model
   RaschFitSimData <- RM(sim_data, sum0 = TRUE)
@@ -261,7 +268,7 @@ run_one_InfitOutfit <- function(n_persons, k_items, manual_diffs, manual_abiliti
 
 
 
-run_InfitOutfit_simulation_study <- function(n_simulations, n_persons, k_items, manual_diffs, manual_abilities = NULL, misspecified_items = NULL){
+run_InfitOutfit_simulation_study <- function(n_simulations, n_persons, k_items, manual_diffs, manual_abilities = NULL, misspecified_items = NULL, remove_min_max_scores = FALSE){
   
   # Data frame to store results
   results <- data.frame(matrix(NA, nrow = n_simulations, ncol = 4))
@@ -269,7 +276,12 @@ run_InfitOutfit_simulation_study <- function(n_simulations, n_persons, k_items, 
   
   # Simulation loop
   for (i in 1:n_simulations) {
-    results[i, ] <- run_one_InfitOutfit(n_persons = n_persons, k_items = k_items, manual_diffs = manual_diffs, manual_abilities = manual_abilities, misspecified_items = misspecified_items)
+    results[i, ] <- run_one_InfitOutfit(n_persons = n_persons, 
+                                        k_items = k_items, 
+                                        manual_diffs = manual_diffs, 
+                                        manual_abilities = manual_abilities, 
+                                        misspecified_items = misspecified_items, 
+                                        remove_min_max_scores = remove_min_max_scores)
   }
   
   return(results)
