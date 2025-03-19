@@ -108,7 +108,7 @@ We run a simulation study to investegate the distribution of the Infit and Outfi
 n_person__list <- c(100, 150, 200, 250, 300, 350, 400, 600, 800, 1000, 1500, 2000)
 result_list <- vector("list", length(n_person__list))
 
-manual_diffs <- c(1, -2, 0.5, -1, 1.5, 2, -3, 0.5, -1, 1.5)
+manual_diffs <- c(1, -2, 0.5, -1, 1.5, 2, -1, 0.5, -1, 1.5)
 
 for (i in 1:length(n_person__list)) {
   print(paste("Running simulation for", n_person__list[i], "persons"))
@@ -232,12 +232,12 @@ maxoutfitp <- ggplot(data = maxoutfit_df, aes(x = n_persons, y = maxoutfit0.025)
 
 
 
-gridExtra::grid.arrange(mininfitp, minoutfitp, maxinfitp, maxoutfitp, ncol = 2)
+gridExtra::grid.arrange(maxinfitp, maxoutfitp, mininfitp, minoutfitp, ncol = 2)
 ```
 
 ```{r}
-png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/infitoutfitsimR.png", width = 1100, height = 800)
-gridExtra::grid.arrange(mininfitp, minoutfitp, maxinfitp, maxoutfitp, ncol = 2)
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/infitoutfitsimR.png", width = 1100, height = 800)
+gridExtra::grid.arrange(maxinfitp, maxoutfitp, mininfitp, minoutfitp, ncol = 2)
 dev.off()
 ```
 

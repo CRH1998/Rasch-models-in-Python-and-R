@@ -73,10 +73,14 @@ We do a few plots of the data to get an idea of the distribution of the data. We
 
 ```{r}
 meltData <- melt(data.table(data), measure.vars = c("Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10")) %>% 
-  dplyr::select(variable, value)
+  dplyr::select(variable, value) %>% mutate(value = forcats::fct_relevel(value, c("0", "1", "2", "3", "4")))
+ggplot(meltData, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+```
 
+
+```{r}
 # Boxplot of the different questions
-png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/obsdata_barplot.png", width = 800, height = 600)
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/obsdata_barplot.png", width = 800, height = 600)
 ggplot(meltData, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
 dev.off()
 ```
@@ -117,6 +121,18 @@ dplyr::select(Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10)
 head(binary_data)
 dim(binary_data)
 ```
+
+```{r}
+meltData_binary <- melt(as.data.frame(binary_data), measure.vars = c("Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10")) %>% 
+  dplyr::select(variable, value) %>% mutate(value = as.factor(value)) %>% mutate(forcats::fct_relevel(value, c("0", "1")))
+ggplot(meltData_binary, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+
+
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/obsdata_binary_barplot.png", width = 800, height = 600)
+ggplot(meltData_binary, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+dev.off()
+```
+
 
 ## Rasch analysis
 We now perform a Rasch analysis on the binary data. We start by fitting a Rasch model to the data:
@@ -169,6 +185,84 @@ CICCplot(model = rasch_model_binary,
          which.item = 10,
          lower.groups = c(0 ,3 ,6 ,8 ,9))
 ```
+
+
+### mirt
+We can estimate the item parameters of a Rasch model from the data set using the mirt() function as follows:
+
+```{r}
+library(mirt)
+# Model fit
+mirt_fit <- mirt::mirt(data = binary_data, model = 1, itemtype = "Rasch")
+```
+The first argument specifies the data, the second argument specifies the number of dimensions for our IRT model. The third argument specifies the IRT model we want to use, in this case the Rasch model. To retrieve the item parameter estimates we use the coef() function:
+
+```{r}
+coef(mirt_fit, IRTpars = TRUE, simplify = TRUE)
+```
+The result is a list of three elements: items, means and cov. The latter two elements are the assumed mean and variance/covariance of the person ability distribution for the population of test takers. These are required, since mirt uses marginal maximum likelihood estimation. The slope or discrimination parameter is listed in the $a$ column, the difficulty parameter is listed in the the $b$ column, and the $g$ column denotes the guessing parameter. We specify IRTpars = TRUE to get the "standard" parameterization of the Rasch model. That is, setting IRTpars = TRUE tells the coef() function to convert its estimates from the slope-intercept form to the form
+
+$$P(U_{pi} = 1 \mid \theta_p, \alpha_i, \beta_i, \gamma_i) = \gamma_i (1 - \gamma_i) \frac{\exp(\alpha_i(\theta_p - \beta_i))}{1 + \exp(\alpha_i (\theta_p - \beta_i))} \overset{Rasch} = \frac{\exp(\theta_p - \beta_i)}{1 + \exp(\theta_p - \beta_i)}$$
+where $\alpha$ corresponds to $a$, $\beta$ corresponds to $b$, and $\gamma$ corresponds to $g$ in the output above.
+
+We can estimate the test taker ability using the fscores() function. For unidimensional models, the most important arguments to fscores() are object and method. The object argument takes the reult of the mirt() function. The method argument indicates which method to use for estimating the person parameters. By default, method = "EAP" is used, which stands for expected a posteriori estimation. This method is based on the posterior distribution of the person parameters given the observed data. The fscores() function returns a matrix containing the person parameter for each person:
+
+```{r}
+mirt_pp <- mirt::fscores(mirt_fit, method = "EAP")
+head(mirt_pp)
+```
+It is possible to evaluate the Rasch model fit by means of infit and outfit statistics similar to the eRm package:
+
+```{r}
+mirt::itemfit(mirt_fit, fit_stats = "infit", method = "ML")
+```
+
+
+### TAM
+
+We can estimate the item parameters of a Rasch model from the data set using the tam.mml() function as follows:
+
+```{r}
+# Model fit
+TAM_fit <- TAM::tam.mml(binary_data)
+TAM_fit$item
+```
+
+Like mirt, the TAM package uses marginal maximum likelihood estimation. The tam.mml uses the parameterization
+
+
+$$P(U_{pi} = 1 \mid \theta_p, \xi, B_i) \overset{Rasch} = \frac{\exp(B_i \theta_p - \xi_i)}{1 + \exp(B_i \theta_p - \xi_i)}$$
+
+We can get the IRT parameters in the classical parameterization using:
+
+```{r}
+TAM_fit$item_irt
+```
+
+When we fit the TAM-model we also get estimates of the person parameters which can be retrieved as follows:
+
+```{r}
+TAM_fit$person
+```
+
+
+
+The TAM package offers various options for assessing the fit of an estimated IRT model. For instance, we can compute in- and outfit statistics in TAM using the tam.fit() function:
+
+```{r}
+TAM::tam.fit(TAM_fit)
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Rasch model polytomous data

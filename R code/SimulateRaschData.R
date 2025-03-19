@@ -246,11 +246,11 @@ run_one_InfitOutfit <- function(n_persons, k_items, manual_diffs, manual_abiliti
   }
   
   # Fit Rasch model
-  RaschFitSimData <- RM(sim_data, sum0 = TRUE)
+  RaschFitSimData <- eRm::RM(sim_data, sum0 = TRUE)
   
   # Get infit/outfit values
-  ppRaschFitSim <- person.parameter(RaschFitSimData)
-  ifRaschFitSim <- itemfit(ppRaschFitSim)
+  ppRaschFitSim <- eRm::person.parameter(RaschFitSimData)
+  ifRaschFitSim <- eRm::itemfit(ppRaschFitSim)
   
   maxinfit <- max(ifRaschFitSim$i.infitMSQ)
   mininfit <- min(ifRaschFitSim$i.infitMSQ)

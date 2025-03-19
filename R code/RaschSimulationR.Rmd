@@ -164,7 +164,7 @@ itemfit(ppPoly)
 We perform a simulation study similar to the one in Python. We simulate a dataset with 500 individuals, 10 items and run 1000 simulations. We specify the item difficulty but randomly generate the person abilities. 
 
 ```{r}
-n_simulations <- 500
+n_simulations <- 100
 n <- 500
 k <- 10
 
@@ -231,6 +231,34 @@ SML_simulation_studies_Coverage <- data.frame(cbind(
   do.call(rbind, lapply(SML_simulation_studies[1:10], function(x) x$Coverage))
 ))
 ```
+
+```{r}
+#Boxplot dataframe
+SML_simulation_studies_bias_boxplot <- melt(SML_simulation_studies_bias, id.vars = "persons") %>% dplyr::select(persons, value) %>% mutate(persons = as.factor(persons))
+SML_simulation_studies_Coverage_boxplot <- melt(SML_simulation_studies_Coverage, id.vars = "n_persons_list") %>% dplyr::select(n_persons_list, value) %>% mutate(n_persons_list = as.factor(n_persons_list))
+
+colnames(SML_simulation_studies_bias_boxplot) <- c("n", "value")
+colnames(SML_simulation_studies_Coverage_boxplot) <- c("n", "value")
+
+betasboxplot <- ggplot(SML_simulation_studies_bias_boxplot, aes(y = value, fill = n)) +
+  geom_boxplot() +
+  labs(title = "Bias across all parameters for different n", y = "Bias") +
+  theme_bw() + theme(axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14), 
+                     axis.title.x=element_blank(),
+                     axis.text.x=element_blank(),
+                     axis.ticks.x=element_blank())
+
+Coverageboxplot <- ggplot(SML_simulation_studies_Coverage_boxplot, aes(y = value, fill = n)) +
+  geom_boxplot() +
+  labs(title = "Coverage across all parameters for different n", y = "Coverage") +
+  theme_bw() + theme(axis.text = element_text(size = 15),  
+                     axis.title=element_text(size=14), 
+                     axis.title.x=element_blank(),
+                     axis.text.x=element_blank(),
+                     axis.ticks.x=element_blank())
+```
+
 
 ```{r}
 betasplot <- ggplot(SML_simulation_studies_bias, aes(x = n_persons_list)) +
@@ -349,11 +377,11 @@ Coverageplot <- ggplot(SML_simulation_studies_Coverage, aes(x = n_persons_list))
                      axis.text = element_text(size = 15),  
                      axis.title=element_text(size=14))
 
-gridExtra::grid.arrange(betasplot, sdsplot, betasdplot, Coverageplot, ncol = 2)
+gridExtra::grid.arrange(betasboxplot, sdsplot, betasdplot, Coverageboxplot, ncol = 2)
 ```
 ```{r}
-png(file = "C:/Users/brf337/Desktop/Rasch package/R code/Rplots/SimulationPlotR.png", width = 1100, height = 800)
-gridExtra::grid.arrange(betasplot, sdsplot, betasdplot, Coverageplot, ncol = 2)
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/SimulationPlotR.png", width = 1100, height = 800)
+gridExtra::grid.arrange(betasboxplot, sdsplot, betasdplot, Coverageboxplot, ncol = 2)
 dev.off()
 ```
 

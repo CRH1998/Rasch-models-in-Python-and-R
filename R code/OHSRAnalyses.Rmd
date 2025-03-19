@@ -44,6 +44,23 @@ The number of missing rows is relatively small so we simply remove these rows:
 OHS <- OHS[complete.cases(OHS), ]
 dim(OHS)
 ```
+We plot a histogram of the distribution of the answers to each item:
+
+```{r}
+# Plot histogram of item responses
+meltData <- melt(as.data.frame(OHS), measure.vars = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")) %>% 
+  dplyr::select(variable, value) %>% mutate(value = as.factor(value)) %>% mutate(value = forcats::fct_relevel(value, c("0", "1", "2", "3", "4")))
+ggplot(meltData, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+
+
+
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/obsdata_barplot.png", width = 800, height = 600)
+ggplot(meltData, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+dev.off()
+```
+
+
+
 We dichotomize the data to be able to run our analysis:
 
 ```{r}
@@ -55,6 +72,16 @@ OHS_dich[] <- lapply(OHS, function(x) {
 
 We then run the three different models.
 
+```{r}
+meltData_binary <- melt(as.data.frame(OHS_dich), measure.vars = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")) %>% 
+  dplyr::select(variable, value) %>% mutate(value = as.factor(value)) %>% mutate(forcats::fct_relevel(value, c("0", "1")))
+ggplot(meltData_binary, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+
+
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/obsdata_binary_barplot.png", width = 800, height = 600)
+ggplot(meltData_binary, aes(x = value)) + geom_bar() + facet_wrap(~variable, scale="free") + theme_bw()
+dev.off()
+```
 
 
 ### eRm
@@ -84,6 +111,18 @@ OHS_eRm_pp
 eRm::itemfit(OHS_eRm_pp)
 ```
 
+```{r}
+eRm::plotjointICC(OHS_eRm)
+eRm::plotPImap(OHS_eRm)
+
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/jointICC.png", width = 600, height = 400)
+eRm::plotjointICC(OHS_eRm)
+dev.off()
+
+png(file = "C:/Users/brf337/Desktop/Rasch package/Rasch-models-in-Python-and-R/R code/Rplots/PImap.png", width = 600, height = 400)
+eRm::plotPImap(OHS_eRm)
+dev.off()
+```
 
 
 ### mirt
@@ -265,10 +304,65 @@ dev.off()
 
 
 
+# Polytomous analysis
+
+
+
+```{r}
+OHS
+```
+
+
+
+## eRm
+
+```{r}
+OHS_PCM_eRm <- eRm::PCM(OHS, sum0 = TRUE)
+thresholds(OHS_PCM_eRm)
+```
+
+```{r}
+pp_OHS_PCM_eRm <- eRm::person.parameter(OHS_PCM_eRm)
+eRm::itemfit(pp_OHS_PCM_eRm)
+```
 
 
 
 
+## mirt
+
+```{r}
+OHS_PCM_mirt <- mirt::mirt(data = OHS, model = 1, itemtype = "Rasch", SE = TRUE)
+coef(OHS_PCM_mirt, IRTpars = TRUE, simplify = TRUE)
+```
+
+
+```{r}
+pp_OHS_PCM_mirt <- mirt::fscores(OHS_PCM_mirt, method = "EAP")
+head(pp_OHS_PCM_mirt)
+```
+
+```{r}
+mirt::itemfit(OHS_PCM_mirt, fit_stats = "infit", method = "ML")
+```
 
 
 
+## TAM
+
+```{r}
+OHS_PCM_TAM <- TAM::tam.mml(OHS)
+OHS_PCM_TAM$item
+```
+
+```{r}
+OHS_PCM_TAM$item_irt
+```
+
+```{r}
+OHS_PCM_TAM$person
+```
+
+```{r}
+TAM::tam.fit(OHS_PCM_TAM)
+```
