@@ -351,9 +351,14 @@ mirt::itemfit(OHS_PCM_mirt, fit_stats = "infit", method = "ML")
 ## TAM
 
 ```{r}
-OHS_PCM_TAM <- TAM::tam.mml(OHS)
-OHS_PCM_TAM$item
+OHS_PCM_TAM <- TAM::tam.mml(OHS, irtmodel = "PCM")
+OHS_PCM_TAM$item_irt
 ```
+
+```{r}
+tam.threshold(OHS_PCM_TAM)
+```
+
 
 ```{r}
 OHS_PCM_TAM$item_irt
@@ -364,5 +369,45 @@ OHS_PCM_TAM$person
 ```
 
 ```{r}
-TAM::tam.fit(OHS_PCM_TAM)
+msq.itemfit(OHS_PCM_TAM)$itemfit
 ```
+
+
+```{r}
+plot(OHS_PCM_TAM, 
+     type = "items", 
+     export = FALSE, 
+     package = "graphics", 
+     observed = FALSE, 
+     low = -6, 
+     high = 6)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+coef(OHS_PCM_mirt, IRTpars = TRUE, simplify = TRUE)
+OHS_PCM_TAM$item_irt
+```
+
+
+## PCM visual comparison
+
+```{r}
+eRmthresholdsTable <- thresholds(OHS_PCM_eRm)$threshtable$`1`
+mirtthresholdsTable <- coef(OHS_PCM_mirt, IRTpars = TRUE, simplify = TRUE)$items[]
+TAMthresholdsTable <- tam.threshold(OHS_PCM_TAM)
+```
+
+
+
+
